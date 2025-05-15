@@ -1,0 +1,172 @@
+-- CONSULTAS
+
+--Listado de leones y la manada a la que pertenecen
+
+SELECT l.nombre AS leon, l.sexo, l.fecha_nacimiento, m.nombre AS manada
+FROM kruger.leones l
+JOIN kruger.manada m ON l.manada_id = m.id;
+
+--Manadas y el área donde se encuentran
+SELECT m.nombre AS manada, a.nombre AS area, a.riesgo, a.clima
+FROM kruger.manada m
+JOIN kruger.area a ON m.area_id = a.id;
+
+
+--Personal médico y su especialidad
+
+SELECT nombre, apellido, especialidad
+FROM kruger.personal_medico;
+
+
+--Tratamientos médicos realizados a leones
+
+SELECT t.descripcion, t.fecha, l.nombre AS leon, pm.nombre AS medico
+FROM kruger.tratamiento_medico t
+JOIN kruger.leones l ON t.id_individuo = l.id
+JOIN kruger.personal_medico pm ON t.id_personalmedico = pm.id;
+
+--Nacimientos recientes en cada manada
+
+SELECT n.fecha, n.cantidad, m.nombre AS manada
+FROM kruger.nacimiento n
+JOIN kruger.manada m ON n.id_manada = m.id
+ORDER BY n.fecha DESC;
+
+--Vehículos disponibles
+
+SELECT *
+FROM kruger.vehiculos;
+
+
+--Manadas con cantidad de leones
+
+SELECT m.nombre AS manada, COUNT(l.id) AS cantidad_leones
+FROM kruger.manada m
+LEFT JOIN kruger.leones l ON l.manada_id = m.id
+GROUP BY m.nombre;
+
+
+-- Listar tratamientos médicos con nombre del león y del médico que lo atendió
+
+SELECT 
+    t.fecha,
+    t.descripcion,
+    l.nombre AS leon,
+    pm.nombre || ' ' || pm.apellido AS medico
+FROM 
+    kruger.tratamiento_medico t
+JOIN 
+    kruger.leones l ON t.id_individuo = l.id
+JOIN 
+    kruger.personal_medico pm ON t.id_personalmedico = pm.id;
+
+
+--Mostrar leones con su manada y área
+--LEFT JOIN: Incluye leones aunque no tengan manada o área asociada.
+
+SELECT 
+    l.nombre AS leon,
+    l.sexo,
+    m.nombre AS manada,
+    a.nombre AS area
+FROM 
+    kruger.leones l
+LEFT JOIN 
+    kruger.manada m ON l.manada_id = m.id
+LEFT JOIN 
+    kruger.area a ON m.area_id = a.id;
+
+
+--Mostrar vehículos con el nombre del conductor 
+--COALESCE(expr1, expr2): Devuelve el primer valor no nulo. Aquí, si no hay conductor, muestra "Sin conductor".
+
+SELECT 
+    v.modelo,
+    v.matricula,
+    COALESCE(pm.nombre || ' ' || pm.apellido, 'Sin conductor') AS conductor
+FROM 
+    kruger.vehiculos v
+LEFT JOIN 
+    kruger.personal_medico pm ON v.conductor_id = pm.id;
+
+
+--Cantidad total de nacimientos por manada
+
+SELECT 
+    m.nombre AS manada,
+    SUM(n.cantidad) AS total_nacimientos
+FROM 
+    kruger.nacimiento n
+JOIN 
+    kruger.manada m ON n.id_manada = m.id
+GROUP BY 
+    m.nombre;
+
+
+--Material médico con el nombre del responsable
+
+SELECT 
+    mm.herramienta,
+    mm.recambios,
+    COALESCE(pm.nombre || ' ' || pm.apellido, 'Sin responsable') AS responsable
+FROM 
+    kruger.material_medico mm
+LEFT JOIN 
+    kruger.personal_medico pm ON mm.permiso_id = pm.id;
+
+
+--Tratamientos realizados en la última semana
+
+SELECT 
+    t.fecha,
+    t.descripcion,
+    l.nombre AS leon,
+    pm.nombre || ' ' || pm.apellido AS medico
+FROM 
+    kruger.tratamiento_medico t
+JOIN 
+    kruger.leones l ON t.id_individuo = l.id
+JOIN 
+    kruger.personal_medico pm ON t.id_personalmedico = pm.id
+WHERE 
+    t.fecha >= CURRENT_DATE - INTERVAL '7 days';
+
+
+--Ejemplo: Relacionar material_medico con manadas
+
+SELECT 
+    mm.herramienta,
+    mm.recambios,
+    pm.nombre || ' ' || pm.apellido AS responsable,
+    l.nombre AS leon_tratado,
+    m.nombre AS manada,
+    a.nombre AS area
+FROM 
+    kruger.material_medico mm
+JOIN 
+    kruger.personal_medico pm ON mm.permiso_id = pm.id
+JOIN 
+    kruger.tratamiento_medico t ON t.id_personalmedico = pm.id
+JOIN 
+    kruger.leones l ON t.id_individuo = l.id
+JOIN 
+    kruger.manadas m ON l.manada_id = m.id
+JOIN 
+    kruger.area a ON m.area_id = a.id
+ORDER BY 
+    mm.herramienta;
+
+--DISTINCT ON – Obtener una sola fila por grupo (específico Postgre)
+
+SELECT DISTINCT ON (t.id_individuo)
+    t.id_individuo,
+    l.nombre AS leon,
+    t.fecha,
+    t.descripcion
+FROM 
+    kruger.tratamiento_medico t
+JOIN 
+    kruger.leones l ON t.id_individuo = l.id
+ORDER BY 
+    t.id_individuo, t.fecha DESC;
+
